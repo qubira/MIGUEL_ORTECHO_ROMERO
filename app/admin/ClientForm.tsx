@@ -5,7 +5,7 @@ import { useState } from "react";
 type Client = {
   id: string;
   name: string;
-  email: string;
+  username: string;
   createdAt: string;
 };
 
@@ -15,7 +15,7 @@ export default function ClientForm({
   onCreated: (client: Client) => void;
 }) {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -30,7 +30,7 @@ export default function ClientForm({
     const res = await fetch("/api/admin/clients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, username, password }),
     });
     const data = await res.json();
     setLoading(false);
@@ -42,10 +42,10 @@ export default function ClientForm({
 
     onCreated(data.client);
     setSuccess(
-      `Cliente creado. Comparte con ${email} el link del portal y esta contraseña: "${password}".`
+      `Cliente creado. Comparte con él/ella el link del portal, el usuario "${username}" y esta contraseña: "${password}".`
     );
     setName("");
-    setEmail("");
+    setUsername("");
     setPassword("");
   }
 
@@ -61,12 +61,12 @@ export default function ClientForm({
         />
       </div>
       <div>
-        <label className="label">Correo (usuario de acceso)</label>
+        <label className="label">Usuario de acceso</label>
         <input
-          type="email"
+          type="text"
           className="input"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           required
         />
       </div>

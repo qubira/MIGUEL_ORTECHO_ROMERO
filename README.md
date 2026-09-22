@@ -13,7 +13,7 @@ cliente los descargue con su propio usuario y contraseña.
 ## Cómo funciona
 
 1. El **administrador** entra a `/admin` con su cuenta y:
-   - Crea una cuenta (correo + contraseña) para cada cliente.
+   - Crea una cuenta (usuario + contraseña) para cada cliente.
    - Sube el documento escaneado asignado a ese cliente.
 2. Le comparte al cliente el **link del sitio** + su **usuario y contraseña**
    (por WhatsApp, correo, etc. — fuera de la app).
@@ -38,7 +38,7 @@ cp .env.example .env
   producción.
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`: los
   encuentras en el dashboard de [Cloudinary](https://cloudinary.com).
-- `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`: credenciales del primer
+- `ADMIN_NAME`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`: credenciales del primer
   usuario administrador (se crean con el seed, ver abajo).
 
 ## 2. Instalar dependencias
@@ -50,7 +50,7 @@ npm install
 ## 3. Crear las tablas en Neon
 
 ```bash
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 ```
 
 ## 4. Crear el usuario administrador
@@ -59,7 +59,7 @@ npx prisma migrate dev --name init
 npm run seed
 ```
 
-Esto crea (o actualiza) un usuario `ADMIN` con el correo y contraseña que
+Esto crea (o actualiza) un usuario `ADMIN` con el usuario y contraseña que
 pusiste en `.env`. Con esa cuenta entras a `/admin`.
 
 ## 5. Correr en local

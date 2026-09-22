@@ -7,7 +7,7 @@ import UploadForm from "./UploadForm";
 type Client = {
   id: string;
   name: string;
-  email: string;
+  username: string;
   createdAt: string;
 };
 
@@ -104,7 +104,7 @@ export default function AdminPanel({
                         selected?.id === c.id ? "text-gray-300" : "text-gray-500"
                       }`}
                     >
-                      {c.email}
+                      {c.username}
                     </p>
                   </button>
                 </li>

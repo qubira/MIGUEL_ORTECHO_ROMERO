@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const documents = await prisma.document.findMany({
     where: clientId ? { clientId } : undefined,
     orderBy: { uploadedAt: "desc" },
-    include: { client: { select: { name: true, email: true } } },
+    include: { client: { select: { name: true, username: true } } },
   });
 
   return NextResponse.json({ documents });

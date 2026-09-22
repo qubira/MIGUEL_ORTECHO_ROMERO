@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,7 @@ export default function LoginForm() {
     setLoading(true);
 
     const res = await signIn("credentials", {
-      email,
+      username,
       password,
       redirect: false,
     });
@@ -25,7 +25,7 @@ export default function LoginForm() {
     setLoading(false);
 
     if (!res || res.error) {
-      setError("Correo o contraseña incorrectos.");
+      setError("Usuario o contraseña incorrectos.");
       return;
     }
 
@@ -41,16 +41,16 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="label" htmlFor="email">
-          Correo electrónico
+        <label className="label" htmlFor="username">
+          Usuario
         </label>
         <input
-          id="email"
-          type="email"
+          id="username"
+          type="text"
           required
           className="input"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           autoComplete="username"
         />
       </div>

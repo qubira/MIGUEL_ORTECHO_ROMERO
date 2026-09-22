@@ -13,14 +13,14 @@ export const authOptions: AuthOptions = {
     CredentialsProvider({
       name: "Credenciales",
       credentials: {
-        email: { label: "Correo", type: "email" },
+        username: { label: "Usuario", type: "text" },
         password: { label: "Contraseña", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.username || !credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase().trim() },
+          where: { username: credentials.username.toLowerCase().trim() },
         });
         if (!user) return null;
 
@@ -30,7 +30,6 @@ export const authOptions: AuthOptions = {
         return {
           id: user.id,
           name: user.name,
-          email: user.email,
           role: user.role,
         };
       },
