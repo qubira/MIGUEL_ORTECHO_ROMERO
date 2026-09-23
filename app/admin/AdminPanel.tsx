@@ -81,8 +81,38 @@ export default function AdminPanel({
     id: string;
     title: string;
   } | null>(null);
+  const [reordering, setReordering] = useState<Set<string>>(new Set());
+  const [savingOrder, setSavingOrder] = useState(false);
 
   const groups = useMemo(() => groupDocuments(documents), [documents]);
+
+  function toggleReorder(key: string) {
+    setReordering((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  async function movePage(group: DocGroup, from: number, to: number) {
+    if (to < 0 || to >= group.docs.length || savingOrder) return;
+    const reordered = [...group.docs];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+
+    setSavingOrder(true);
+    try {
+      await fetch(`/api/admin/books/${group.key}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: reordered.map((d) => d.id) }),
+      });
+      if (selected) await loadDocuments(selected.id);
+    } finally {
+      setSavingOrder(false);
+    }
+  }
 
   async function loadDocuments(clientId: string) {
     setLoadingDocs(true);
@@ -201,45 +231,86 @@ export default function AdminPanel({
                       (sum, d) => sum + (d.bytes || 0),
                       0
                     );
+                    const isReordering = reordering.has(group.key);
                     return (
-                      <div
-                        key={group.key}
-                        className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
-                      >
-                        <div>
-                          <p className="font-medium text-gray-800 text-sm">
-                            {group.title}
-                            {group.isBook && (
-                              <span className="ml-2 text-xs font-normal text-gold-600">
-                                {group.docs.length} hojas
-                              </span>
+                      <div key={group.key} className="py-3 first:pt-0 last:pb-0">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-800 text-sm">
+                              {group.title}
+                              {group.isBook && (
+                                <span className="ml-2 text-xs font-normal text-gold-600">
+                                  {group.docs.length} hojas
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(group.uploadedAt).toLocaleDateString("es-PE")}
+                              {totalBytes ? ` · ${formatBytes(totalBytes)}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            {group.isBook && group.docs.length > 1 && (
+                              <button
+                                onClick={() => toggleReorder(group.key)}
+                                className="btn-secondary"
+                              >
+                                {isReordering ? "Listo" : "Ordenar"}
+                              </button>
                             )}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(group.uploadedAt).toLocaleDateString("es-PE")}
-                            {totalBytes ? ` · ${formatBytes(totalBytes)}` : ""}
-                          </p>
+                            <button
+                              onClick={() =>
+                                setViewing({
+                                  kind: group.isBook ? "book" : "single",
+                                  id: group.key,
+                                  title: group.title,
+                                })
+                              }
+                              className="btn-secondary"
+                            >
+                              Ver
+                            </button>
+                            <button
+                              onClick={() => handleDeleteGroup(group)}
+                              className="btn-danger"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() =>
-                              setViewing({
-                                kind: group.isBook ? "book" : "single",
-                                id: group.key,
-                                title: group.title,
-                              })
-                            }
-                            className="btn-secondary"
-                          >
-                            Ver
-                          </button>
-                          <button
-                            onClick={() => handleDeleteGroup(group)}
-                            className="btn-danger"
-                          >
-                            Eliminar
-                          </button>
-                        </div>
+
+                        {isReordering && (
+                          <ul className="mt-3 space-y-1 bg-gray-50 rounded-lg p-2">
+                            {group.docs.map((doc, i) => (
+                              <li
+                                key={doc.id}
+                                className="flex items-center justify-between bg-white rounded-md border border-gray-200 px-3 py-1.5"
+                              >
+                                <span className="text-sm text-gray-700">
+                                  {i + 1}. {doc.title}
+                                </span>
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => movePage(group, i, i - 1)}
+                                    disabled={i === 0 || savingOrder}
+                                    aria-label="Mover arriba"
+                                    className="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    onClick={() => movePage(group, i, i + 1)}
+                                    disabled={i === group.docs.length - 1 || savingOrder}
+                                    aria-label="Mover abajo"
+                                    className="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  >
+                                    ↓
+                                  </button>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     );
                   })}
