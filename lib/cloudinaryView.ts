@@ -19,6 +19,11 @@ export function getInlineViewUrl(doc: ViewableDocument) {
     secure: true,
     format: isPdf ? "jpg" : doc.format || undefined,
     page: isPdf ? 1 : undefined,
+    // Corrige físicamente los píxeles según la orientación EXIF del celular
+    // que escaneó la hoja. El navegador ya la respeta al mostrar <img>, pero
+    // pdf-lib (usado para el PDF combinado) la ignora y entrega la imagen
+    // "cruda" tal como quedó grabada, por eso salía al revés solo ahí.
+    angle: "exif",
   });
 }
 
