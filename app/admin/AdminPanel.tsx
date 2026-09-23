@@ -100,18 +100,34 @@ export default function AdminPanel({
     const reordered = [...group.docs];
     const [moved] = reordered.splice(from, 1);
     reordered.splice(to, 0, moved);
+    await saveOrder(group, reordered.map((d) => d.id));
+  }
 
+  async function saveOrder(group: DocGroup, orderedIds: string[]) {
     setSavingOrder(true);
     try {
       await fetch(`/api/admin/books/${group.key}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order: reordered.map((d) => d.id) }),
+        body: JSON.stringify({ order: orderedIds }),
       });
       if (selected) await loadDocuments(selected.id);
     } finally {
       setSavingOrder(false);
     }
+  }
+
+  async function handleReverseOrder(group: DocGroup) {
+    if (savingOrder) return;
+    if (
+      !confirm(
+        `¿Invertir el orden de las ${group.docs.length} hojas? La primera pasará a ser la última y así con todas.`
+      )
+    ) {
+      return;
+    }
+    const reversed = [...group.docs].reverse().map((d) => d.id);
+    await saveOrder(group, reversed);
   }
 
   async function loadDocuments(clientId: string) {
@@ -259,12 +275,22 @@ export default function AdminPanel({
                           </div>
                           <div className="flex gap-2">
                             {group.isBook && group.docs.length > 1 && (
-                              <button
-                                onClick={() => toggleReorder(group.key)}
-                                className="btn-secondary"
-                              >
-                                {isReordering ? "Listo" : "Editar hojas"}
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleReverseOrder(group)}
+                                  disabled={savingOrder}
+                                  className="btn-secondary disabled:opacity-50"
+                                  title="Invierte el orden de todas las hojas: la primera pasa a ser la última"
+                                >
+                                  Invertir orden
+                                </button>
+                                <button
+                                  onClick={() => toggleReorder(group.key)}
+                                  className="btn-secondary"
+                                >
+                                  {isReordering ? "Listo" : "Editar hojas"}
+                                </button>
+                              </>
                             )}
                             <button
                               onClick={() =>
