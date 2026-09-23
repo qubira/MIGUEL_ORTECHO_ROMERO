@@ -59,10 +59,10 @@ export default function DashboardDocuments({
 }: {
   documents: Document[];
 }) {
-  // Acordeón: solo una sección puede estar abierta a la vez. Si el cliente
-  // no reconoce un documento, basta con abrir otro (o volver a tocar el
-  // mismo) para que las demás se cierren solas.
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  // Todas las secciones se muestran automáticamente (sin botón/clic para
+  // verlas). Si el cliente no reconoce alguna, puede cerrarla individualmente
+  // sin afectar a las demás.
+  const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set());
 
   const groups = useMemo(() => groupDocuments(documents), [documents]);
 
@@ -76,18 +76,25 @@ export default function DashboardDocuments({
   }
 
   function toggle(key: string) {
-    setExpandedKey((prev) => (prev === key ? null : key));
+    setCollapsedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }
 
   return (
     <div className="space-y-3">
       {groups.map((group) => {
-        const isOpen = expandedKey === group.key;
+        const isOpen = !collapsedKeys.has(group.key);
         return (
           <div key={group.key} className="card p-0 overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4">
               <button
                 onClick={() => toggle(group.key)}
+                aria-label={isOpen ? "Ocultar documento" : "Mostrar documento"}
+                title={isOpen ? "Ocultar" : "Mostrar"}
                 className="flex-1 flex items-center justify-between gap-3 text-left min-w-0"
               >
                 <div className="min-w-0">
