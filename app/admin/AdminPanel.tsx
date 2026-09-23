@@ -340,6 +340,25 @@ export default function AdminPanel({
                                 <span aria-hidden>🖌</span> Cubrir datos
                               </button>
                             )}
+                            {group.isBook && (
+                              <div className="flex items-center rounded-lg border border-gray-300 overflow-hidden">
+                                <span className="px-2.5 py-2 text-xs text-gray-500 bg-gray-50 border-r border-gray-300">
+                                  Descargar todo
+                                </span>
+                                <a
+                                  href={`/api/documents/book/${group.key}/download-pdf`}
+                                  className="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition border-r border-gray-300"
+                                >
+                                  PDF
+                                </a>
+                                <a
+                                  href={`/api/documents/book/${group.key}/download-zip`}
+                                  className="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                                >
+                                  Imágenes
+                                </a>
+                              </div>
+                            )}
                             <button
                               onClick={() =>
                                 setViewing({

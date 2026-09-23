@@ -21,3 +21,10 @@ export function getInlineViewUrl(doc: ViewableDocument) {
     page: isPdf ? 1 : undefined,
   });
 }
+
+// El formato realmente entregado por getInlineViewUrl (los PDF se convierten
+// a jpg), útil para saber cómo decodificar/nombrar los bytes descargados.
+export function getEffectiveFormat(doc: ViewableDocument): "png" | "jpg" {
+  const format = doc.format?.toLowerCase();
+  return format === "png" ? "png" : "jpg";
+}

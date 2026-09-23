@@ -82,7 +82,7 @@ export default function DashboardDocuments({
         {groups.map((group) => (
           <div
             key={group.key}
-            className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 first:pt-0 last:pb-0"
           >
             <div>
               <p className="font-medium text-gray-800">
@@ -102,18 +102,39 @@ export default function DashboardDocuments({
                 {group.totalBytes ? ` · ${formatBytes(group.totalBytes)}` : ""}
               </p>
             </div>
-            <button
-              onClick={() =>
-                setViewing({
-                  kind: group.isBook ? "book" : "single",
-                  id: group.key,
-                  title: group.title,
-                })
-              }
-              className="btn-primary"
-            >
-              Ver documento
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {group.isBook && (
+                <div className="flex items-center rounded-lg border border-gray-300 overflow-hidden">
+                  <span className="px-2.5 py-2 text-xs text-gray-500 bg-gray-50 border-r border-gray-300">
+                    Descargar todo
+                  </span>
+                  <a
+                    href={`/api/documents/book/${group.key}/download-pdf`}
+                    className="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition border-r border-gray-300"
+                  >
+                    PDF
+                  </a>
+                  <a
+                    href={`/api/documents/book/${group.key}/download-zip`}
+                    className="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    Imágenes
+                  </a>
+                </div>
+              )}
+              <button
+                onClick={() =>
+                  setViewing({
+                    kind: group.isBook ? "book" : "single",
+                    id: group.key,
+                    title: group.title,
+                  })
+                }
+                className="btn-primary"
+              >
+                Ver documento
+              </button>
+            </div>
           </div>
         ))}
       </div>
