@@ -110,7 +110,9 @@ export default function RedactEditor({
     (e.target as Element).setPointerCapture?.(e.pointerId);
     drawingRef.current = true;
     const point = getRelativePoint(e);
-    setStrokes((prev) => [...prev, { points: [point], size: brushSize }]);
+    // Every stroke is just its start and current point, so the covered
+    // area is always a straight bar instead of following hand wobble.
+    setStrokes((prev) => [...prev, { points: [point, point], size: brushSize }]);
   }
 
   function handlePointerMove(e: React.PointerEvent) {
@@ -120,7 +122,7 @@ export default function RedactEditor({
       if (prev.length === 0) return prev;
       const next = prev.slice(0, -1);
       const last = prev[prev.length - 1];
-      next.push({ ...last, points: [...last.points, point] });
+      next.push({ ...last, points: [last.points[0], point] });
       return next;
     });
   }
