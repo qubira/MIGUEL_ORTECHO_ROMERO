@@ -6,6 +6,8 @@ import { getInlineViewUrl, getEffectiveFormat } from "@/lib/cloudinaryView";
 import { isValidRedactions } from "@/lib/redaction";
 import { applyRedactions } from "@/lib/redactionRaster";
 import { loadAuthorizedBook, isSecureUnlocked } from "@/lib/bookAccess";
+import { logAudit } from "@/lib/auditLog";
+import { getClientIp, getUserAgent } from "@/lib/requestMeta";
 
 // Un libro de decenas de hojas puede tardar en descargarse/componerse;
 // evita que la función se corte antes de tiempo en hosts como Vercel.
@@ -59,6 +61,15 @@ export async function GET(
 
   const zipBytes = await zip.generateAsync({ type: "nodebuffer" });
   const filename = `${book.title.replace(/[^\w\- ]+/g, "").trim() || "documento"}.zip`;
+
+  await logAudit({
+    action: "DOWNLOAD",
+    actorId: session.user.id,
+    targetUserId: book.clientId,
+    detail: `Descargó ZIP de imágenes: "${book.title}" (${book.documents.length} hojas)`,
+    ip: getClientIp(req.headers),
+    userAgent: getUserAgent(req.headers),
+  });
 
   return new NextResponse(Buffer.from(zipBytes), {
     headers: {

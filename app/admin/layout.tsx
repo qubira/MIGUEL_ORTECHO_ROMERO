@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 import ProfileToggle from "@/components/ProfileToggle";
@@ -23,6 +24,12 @@ export default async function AdminLayout({
             <h1 className="text-lg font-semibold">{session.user.name}</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Link href="/admin" className="btn-secondary">
+              Clientes
+            </Link>
+            <Link href="/admin/auditoria" className="btn-secondary">
+              Auditoría
+            </Link>
             <ProfileToggle username={session.user.username} />
             <LogoutButton />
           </div>

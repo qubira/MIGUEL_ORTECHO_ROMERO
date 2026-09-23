@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import { getInlineViewUrl, getEffectiveFormat } from "@/lib/cloudinaryView";
 import { isValidRedactions } from "@/lib/redaction";
 import { loadAuthorizedBook, isSecureUnlocked } from "@/lib/bookAccess";
+import { logAudit } from "@/lib/auditLog";
+import { getClientIp, getUserAgent } from "@/lib/requestMeta";
 
 // Un libro de decenas de hojas puede tardar en descargarse/componerse;
 // evita que la función se corte antes de tiempo en hosts como Vercel.
@@ -67,6 +69,15 @@ export async function GET(
 
   const pdfBytes = await pdfDoc.save();
   const filename = `${book.title.replace(/[^\w\- ]+/g, "").trim() || "documento"}.pdf`;
+
+  await logAudit({
+    action: "DOWNLOAD",
+    actorId: session.user.id,
+    targetUserId: book.clientId,
+    detail: `Descargó PDF completo: "${book.title}" (${book.documents.length} hojas)`,
+    ip: getClientIp(req.headers),
+    userAgent: getUserAgent(req.headers),
+  });
 
   return new NextResponse(Buffer.from(pdfBytes), {
     headers: {

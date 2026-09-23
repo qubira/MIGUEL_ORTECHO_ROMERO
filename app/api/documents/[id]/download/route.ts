@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import cloudinary from "@/lib/cloudinary";
 import { SECURE_MODE_COOKIE, verifySecureModeToken } from "@/lib/secureMode";
 import { isValidRedactions } from "@/lib/redaction";
+import { logAudit } from "@/lib/auditLog";
+import { getClientIp, getUserAgent } from "@/lib/requestMeta";
 
 export async function GET(
   req: NextRequest,
@@ -53,6 +55,15 @@ export async function GET(
       expires_at: expiresAt,
     }
   );
+
+  await logAudit({
+    action: "DOWNLOAD",
+    actorId: session.user.id,
+    targetUserId: document.clientId,
+    detail: `Descargó hoja: "${document.title}"`,
+    ip: getClientIp(req.headers),
+    userAgent: getUserAgent(req.headers),
+  });
 
   return NextResponse.redirect(url);
 }

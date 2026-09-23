@@ -21,6 +21,35 @@ model User {
   createdAt    DateTime   @default(now())
   documents    Document[]
   books        Book[]
+
+  auditLogsActed  AuditLog[] @relation("AuditActor")
+  auditLogsTarget AuditLog[] @relation("AuditTarget")
+}
+
+enum AuditAction {
+  LOGIN
+  PASSWORD_CHANGE
+  NAME_CHANGE
+  DOWNLOAD
+  SECURE_MODE_UNLOCK
+}
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  action    AuditAction
+  detail    String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime    @default(now())
+
+  actor   User?   @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorId String?
+
+  targetUser   User?   @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetUserId String?
+
+  @@index([createdAt])
+  @@index([actorId])
 }
 
 model Book {

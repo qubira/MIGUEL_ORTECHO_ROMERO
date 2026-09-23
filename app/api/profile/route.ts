@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import bcrypt from "bcryptjs";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/auditLog";
+import { getClientIp, getUserAgent } from "@/lib/requestMeta";
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -65,6 +67,30 @@ export async function PATCH(req: NextRequest) {
     data,
     select: { name: true, username: true },
   });
+
+  const ip = getClientIp(req.headers);
+  const userAgent = getUserAgent(req.headers);
+
+  if (data.name) {
+    await logAudit({
+      action: "NAME_CHANGE",
+      actorId: user.id,
+      targetUserId: user.id,
+      detail: `Cambió su propio nombre a "${data.name}"`,
+      ip,
+      userAgent,
+    });
+  }
+  if (data.passwordHash) {
+    await logAudit({
+      action: "PASSWORD_CHANGE",
+      actorId: user.id,
+      targetUserId: user.id,
+      detail: "Cambió su propia contraseña",
+      ip,
+      userAgent,
+    });
+  }
 
   return NextResponse.json({ name: updated.name, username: updated.username });
 }

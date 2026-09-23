@@ -2,6 +2,8 @@ import type { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/auditLog";
+import { getClientIp, getUserAgent } from "@/lib/requestMeta";
 
 export const authOptions: AuthOptions = {
   session: { strategy: "jwt" },
@@ -16,7 +18,7 @@ export const authOptions: AuthOptions = {
         username: { label: "Usuario", type: "text" },
         password: { label: "Contraseña", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.username || !credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
@@ -26,6 +28,14 @@ export const authOptions: AuthOptions = {
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!valid) return null;
+
+        await logAudit({
+          action: "LOGIN",
+          actorId: user.id,
+          detail: `Inicio de sesión como ${user.username}`,
+          ip: getClientIp(req?.headers),
+          userAgent: getUserAgent(req?.headers),
+        });
 
         return {
           id: user.id,

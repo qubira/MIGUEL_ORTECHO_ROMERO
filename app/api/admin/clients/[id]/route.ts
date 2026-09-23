@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/requireAdmin";
+import { logAudit } from "@/lib/auditLog";
+import { getClientIp, getUserAgent } from "@/lib/requestMeta";
 
 export async function PATCH(
   req: NextRequest,
@@ -48,6 +50,30 @@ export async function PATCH(
     data,
     select: { id: true, name: true, username: true, createdAt: true },
   });
+
+  const ip = getClientIp(req.headers);
+  const userAgent = getUserAgent(req.headers);
+
+  if (data.name) {
+    await logAudit({
+      action: "NAME_CHANGE",
+      actorId: session.user.id,
+      targetUserId: client.id,
+      detail: `El admin cambió el nombre de "${client.name}" a "${data.name}"`,
+      ip,
+      userAgent,
+    });
+  }
+  if (data.passwordHash) {
+    await logAudit({
+      action: "PASSWORD_CHANGE",
+      actorId: session.user.id,
+      targetUserId: client.id,
+      detail: `El admin restableció la contraseña de "${client.name}"`,
+      ip,
+      userAgent,
+    });
+  }
 
   return NextResponse.json({ client: updated });
 }

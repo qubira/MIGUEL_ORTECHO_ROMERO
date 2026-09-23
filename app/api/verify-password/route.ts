@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createSecureModeToken, SECURE_MODE_COOKIE } from "@/lib/secureMode";
+import { logAudit } from "@/lib/auditLog";
+import { getClientIp, getUserAgent } from "@/lib/requestMeta";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -26,6 +28,14 @@ export async function POST(req: NextRequest) {
   if (!valid) {
     return NextResponse.json({ ok: false, error: "Contraseña incorrecta." }, { status: 401 });
   }
+
+  await logAudit({
+    action: "SECURE_MODE_UNLOCK",
+    actorId: user.id,
+    detail: "Activó el modo seguro para ver datos cubiertos",
+    ip: getClientIp(req.headers),
+    userAgent: getUserAgent(req.headers),
+  });
 
   const res = NextResponse.json({ ok: true });
   const { value, maxAge } = createSecureModeToken(user.id);
