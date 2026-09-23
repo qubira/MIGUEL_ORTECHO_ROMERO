@@ -153,7 +153,11 @@ export default function BookViewer({
   }, [index, mode, pages, inline]);
 
   function goNext() {
-    setIndex((i) => Math.min(i + 2, Math.max(pages.length - 2, 0)));
+    // No usar Math.max(pages.length - 2, 0) como tope: en un libro con un
+    // número impar de hojas eso reengancha el índice en una página impar y
+    // repite la página del medio en dos vistas seguidas en vez de avanzar
+    // limpiamente hasta que la última hoja quede sola (como en un libro real).
+    setIndex((i) => (i + 2 < pages.length ? i + 2 : i));
   }
 
   function goPrev() {

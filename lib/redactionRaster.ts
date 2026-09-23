@@ -1,5 +1,6 @@
 import { Jimp, JimpMime } from "jimp";
 import type { RedactionStroke } from "@/lib/redaction";
+import { effectiveStrokeThickness } from "@/lib/redactionGeometry";
 
 function fillSquare(image: any, cx: number, cy: number, size: number) {
   const half = size / 2;
@@ -38,7 +39,7 @@ export async function applyRedactions(
   for (const stroke of strokes) {
     const [p1, p2] = stroke.points;
     if (!p1 || !p2) continue;
-    const size = Math.max(2, stroke.size * w);
+    const size = Math.max(2, effectiveStrokeThickness(p1, p2, stroke.size, w, h));
     stampLine(image, p1.x * w, p1.y * h, p2.x * w, p2.y * h, size);
   }
 

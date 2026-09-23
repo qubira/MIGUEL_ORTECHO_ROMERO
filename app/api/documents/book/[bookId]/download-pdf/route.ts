@@ -4,6 +4,7 @@ import { PDFDocument, rgb, LineCapStyle } from "pdf-lib";
 import { authOptions } from "@/lib/auth";
 import { getInlineViewUrl, getEffectiveFormat } from "@/lib/cloudinaryView";
 import { isValidRedactions } from "@/lib/redaction";
+import { effectiveStrokeThickness } from "@/lib/redactionGeometry";
 import { loadAuthorizedBook, isSecureUnlocked } from "@/lib/bookAccess";
 import { logAudit } from "@/lib/auditLog";
 import { getClientIp, getUserAgent } from "@/lib/requestMeta";
@@ -59,7 +60,10 @@ export async function GET(
         page.drawLine({
           start: { x: p1.x * image.width, y: image.height - p1.y * image.height },
           end: { x: p2.x * image.width, y: image.height - p2.y * image.height },
-          thickness: Math.max(2, stroke.size * image.width),
+          thickness: Math.max(
+            2,
+            effectiveStrokeThickness(p1, p2, stroke.size, image.width, image.height)
+          ),
           color: rgb(0, 0, 0),
           lineCap: LineCapStyle.Round,
         });

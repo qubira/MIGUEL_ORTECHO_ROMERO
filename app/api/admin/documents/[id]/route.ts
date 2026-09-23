@@ -25,7 +25,12 @@ export async function DELETE(
       resource_type: document.resourceType,
       type: "private",
     })
-    .catch(() => null);
+    .catch((err) =>
+      console.error(
+        `No se pudo borrar el archivo de Cloudinary (publicId=${document.publicId}):`,
+        err
+      )
+    );
 
   await prisma.document.delete({ where: { id } });
 

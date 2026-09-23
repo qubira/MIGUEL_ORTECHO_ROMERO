@@ -29,7 +29,12 @@ export async function DELETE(
           resource_type: doc.resourceType,
           type: "private",
         })
-        .catch(() => null)
+        .catch((err) =>
+          console.error(
+            `No se pudo borrar el archivo de Cloudinary (publicId=${doc.publicId}):`,
+            err
+          )
+        )
     )
   );
 

@@ -4,7 +4,17 @@ export const SECURE_MODE_COOKIE = "secure_mode";
 const TTL_MS = 15 * 60 * 1000; // 15 minutos
 
 function getSecret() {
-  return process.env.NEXTAUTH_SECRET || "dev-secret";
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    // Nunca usar un secreto público como respaldo: cualquiera podría
+    // calcular la firma y falsificar la cookie de modo seguro para
+    // cualquier usuario. Mejor que falle de forma ruidosa a que abra un
+    // hueco de seguridad silencioso.
+    throw new Error(
+      "NEXTAUTH_SECRET no está configurado; requerido para firmar el modo seguro."
+    );
+  }
+  return secret;
 }
 
 function sign(payload: string) {
