@@ -11,6 +11,10 @@ type Page = {
 
 type ViewMode = "spread" | "single";
 
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2.5;
+const ZOOM_STEP = 0.25;
+
 export default function BookViewer({
   kind,
   id,
@@ -29,6 +33,7 @@ export default function BookViewer({
   const [error, setError] = useState("");
   const [mode, setMode] = useState<ViewMode>("spread");
   const [index, setIndex] = useState(0);
+  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +75,10 @@ export default function BookViewer({
   }, [pages, mode]);
 
   useEffect(() => {
+    setZoom(1);
+  }, [mode, index, pages]);
+
+  useEffect(() => {
     if (inline) return;
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose?.();
@@ -91,19 +100,53 @@ export default function BookViewer({
     setIndex((i) => Math.max(i - 2, 0));
   }
 
+  function zoomIn() {
+    setZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)));
+  }
+
+  function zoomOut() {
+    setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)));
+  }
+
   const spreadPages = pages.slice(index, index + 2);
   const atStart = index === 0;
   const atEnd = index + 2 >= pages.length;
+  const spreadBaseVh = inline ? 65 : 80;
+  const singleBaseVh = inline ? 65 : 78;
+
+  const zoomControl = pages.length > 0 && (
+    <div className="flex items-center gap-0.5 rounded-lg border border-white/20 bg-white/5 px-1">
+      <button
+        onClick={zoomOut}
+        disabled={zoom <= MIN_ZOOM}
+        aria-label="Reducir zoom"
+        className="w-7 h-7 flex items-center justify-center text-gray-200 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <span aria-hidden>🔍−</span>
+      </button>
+      <span className="w-11 text-center text-xs text-gray-300 tabular-nums select-none">
+        {Math.round(zoom * 100)}%
+      </span>
+      <button
+        onClick={zoomIn}
+        disabled={zoom >= MAX_ZOOM}
+        aria-label="Aumentar zoom"
+        className="w-7 h-7 flex items-center justify-center text-gray-200 hover:bg-white/10 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <span aria-hidden>🔍+</span>
+      </button>
+    </div>
+  );
 
   return (
     <div
       className={
         inline
           ? "bg-navy-900 rounded-xl overflow-hidden flex flex-col"
-          : "fixed inset-0 z-50 bg-black/80 flex flex-col"
+          : "fixed inset-0 z-50 bg-black/85 flex flex-col"
       }
     >
-      <div className="flex items-center justify-between px-4 py-3 bg-navy-900 text-white">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-navy-900 border-b border-white/10 text-white">
         <div className="min-w-0">
           <h3 className="font-semibold truncate">{title}</h3>
           {pages.length > 0 && (
@@ -117,6 +160,7 @@ export default function BookViewer({
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {zoomControl}
           {pages.length > 1 && (
             <div className="flex rounded-lg overflow-hidden border border-white/20">
               <button
@@ -125,7 +169,9 @@ export default function BookViewer({
                   setIndex((i) => i - (i % 2));
                 }}
                 className={`px-3 py-1.5 text-xs font-medium transition ${
-                  mode === "spread" ? "bg-gold-600 text-white" : "bg-transparent text-gray-200 hover:bg-white/10"
+                  mode === "spread"
+                    ? "bg-gold-600 text-white"
+                    : "bg-transparent text-gray-200 hover:bg-white/10"
                 }`}
               >
                 Libro abierto
@@ -133,7 +179,9 @@ export default function BookViewer({
               <button
                 onClick={() => setMode("single")}
                 className={`px-3 py-1.5 text-xs font-medium transition ${
-                  mode === "single" ? "bg-gold-600 text-white" : "bg-transparent text-gray-200 hover:bg-white/10"
+                  mode === "single"
+                    ? "bg-gold-600 text-white"
+                    : "bg-transparent text-gray-200 hover:bg-white/10"
                 }`}
               >
                 Individual
@@ -141,8 +189,12 @@ export default function BookViewer({
             </div>
           )}
           {!inline && (
-            <button onClick={onClose} className="btn-secondary">
-              Cerrar
+            <button
+              onClick={onClose}
+              aria-label="Cerrar visor"
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/20 text-gray-200 hover:bg-white/10 transition"
+            >
+              ✕
             </button>
           )}
         </div>
@@ -175,24 +227,25 @@ export default function BookViewer({
           </button>
 
           <div
-            className={`flex items-stretch gap-0 bg-[#e9e2d0] shadow-2xl ${
-              inline ? "max-h-[65vh]" : "max-h-[80vh]"
-            }`}
+            className="flex items-stretch gap-0 bg-[#e9e2d0] shadow-2xl"
+            style={{ maxHeight: `${spreadBaseVh}vh` }}
           >
             {spreadPages.map((page, i) => (
               <div
                 key={page.id}
-                className={`bg-white flex items-center justify-center overflow-hidden relative ${
+                className={`bg-white flex items-center justify-center overflow-auto relative ${
                   i === 0 ? "border-r border-black/10" : ""
                 }`}
-                style={{ maxHeight: inline ? "65vh" : "80vh" }}
+                style={{ maxHeight: `${spreadBaseVh}vh` }}
               >
                 <img
                   src={page.url}
                   alt={page.title}
-                  className={`max-w-full object-contain ${
-                    inline ? "max-h-[65vh]" : "max-h-[80vh]"
-                  }`}
+                  className="max-w-full object-contain transition-transform duration-150"
+                  style={{
+                    maxHeight: `${spreadBaseVh}vh`,
+                    transform: `scale(${zoom})`,
+                  }}
                 />
               </div>
             ))}
@@ -213,7 +266,7 @@ export default function BookViewer({
       )}
 
       {!loading && !error && mode === "spread" && spreadPages.length > 0 && (
-        <div className="flex justify-center gap-3 py-3 bg-navy-900">
+        <div className="flex justify-center gap-3 py-3 bg-navy-900 border-t border-white/10">
           {spreadPages.map((page) => (
             <a
               key={page.id}
@@ -227,19 +280,24 @@ export default function BookViewer({
       )}
 
       {!loading && !error && mode === "single" && (
-        <div
-          className={`px-4 py-6 ${
-            inline ? "" : "flex-1 overflow-y-auto"
-          }`}
-        >
+        <div className={`px-4 py-6 ${inline ? "" : "flex-1 overflow-y-auto"}`}>
           <div className="max-w-3xl mx-auto flex flex-col gap-6">
             {pages.map((page) => (
               <div key={page.id} className="bg-white shadow-2xl">
-                <img
-                  src={page.url}
-                  alt={page.title}
-                  className="w-full h-auto object-contain block"
-                />
+                <div
+                  className="flex items-center justify-center overflow-auto"
+                  style={{ maxHeight: `${singleBaseVh}vh` }}
+                >
+                  <img
+                    src={page.url}
+                    alt={page.title}
+                    className="max-w-full object-contain transition-transform duration-150"
+                    style={{
+                      maxHeight: `${singleBaseVh}vh`,
+                      transform: `scale(${zoom})`,
+                    }}
+                  />
+                </div>
                 <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200">
                   <span className="text-xs text-gray-500">
                     Página {page.pageNumber} de {pages.length}

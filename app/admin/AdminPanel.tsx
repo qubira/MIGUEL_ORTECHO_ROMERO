@@ -249,7 +249,7 @@ export default function AdminPanel({
                   Este cliente todavía no tiene documentos.
                 </p>
               ) : (
-                <div className="divide-y divide-gray-200">
+                <div className="space-y-3">
                   {groups.map((group) => {
                     const totalBytes = group.docs.reduce(
                       (sum, d) => sum + (d.bytes || 0),
@@ -257,37 +257,53 @@ export default function AdminPanel({
                     );
                     const isReordering = reordering.has(group.key);
                     return (
-                      <div key={group.key} className="py-3 first:pt-0 last:pb-0">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-gray-800 text-sm">
-                              {group.title}
-                              {group.isBook && (
-                                <span className="ml-2 text-xs font-normal text-gold-600">
-                                  {group.docs.length} hojas
+                      <div
+                        key={group.key}
+                        className="rounded-xl border border-gray-200 p-4 transition hover:border-gray-300 hover:shadow-sm"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className="w-10 h-10 shrink-0 rounded-lg bg-navy-50 text-navy-800 flex items-center justify-center text-lg">
+                              {group.isBook ? "📚" : "📄"}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-gray-900 text-sm truncate">
+                                {group.title}
+                              </p>
+                              <div className="mt-1 flex flex-wrap items-center gap-2">
+                                {group.isBook && (
+                                  <span className="inline-flex items-center rounded-full bg-gold-500/10 text-gold-600 border border-gold-500/30 px-2 py-0.5 text-[11px] font-medium">
+                                    {group.docs.length} hojas
+                                  </span>
+                                )}
+                                <span className="text-xs text-gray-500">
+                                  {new Date(group.uploadedAt).toLocaleDateString("es-PE")}
+                                  {totalBytes ? ` · ${formatBytes(totalBytes)}` : ""}
                                 </span>
-                              )}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(group.uploadedAt).toLocaleDateString("es-PE")}
-                              {totalBytes ? ` · ${formatBytes(totalBytes)}` : ""}
-                            </p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
+
+                          <div className="flex flex-wrap items-center gap-2">
                             {group.isBook && group.docs.length > 1 && (
                               <>
                                 <button
                                   onClick={() => handleReverseOrder(group)}
                                   disabled={savingOrder}
-                                  className="btn-secondary disabled:opacity-50"
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                   title="Invierte el orden de todas las hojas: la primera pasa a ser la última"
                                 >
-                                  Invertir orden
+                                  <span aria-hidden>🔄</span> Invertir orden
                                 </button>
                                 <button
                                   onClick={() => toggleReorder(group.key)}
-                                  className="btn-secondary"
+                                  className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                                    isReordering
+                                      ? "border-navy-800 bg-navy-800 text-white hover:bg-navy-700"
+                                      : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                  }`}
                                 >
+                                  <span aria-hidden>✏️</span>{" "}
                                   {isReordering ? "Listo" : "Editar hojas"}
                                 </button>
                               </>
@@ -300,30 +316,35 @@ export default function AdminPanel({
                                   title: group.title,
                                 })
                               }
-                              className="btn-secondary"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-navy-800 px-3 py-2 text-xs font-medium text-white hover:bg-navy-700 transition"
                             >
-                              Ver
+                              <span aria-hidden>👁</span> Ver
                             </button>
                             <button
                               onClick={() => handleDeleteGroup(group)}
-                              className="btn-danger"
+                              aria-label={group.isBook ? "Eliminar libro" : "Eliminar documento"}
+                              title={group.isBook ? "Eliminar libro" : "Eliminar documento"}
+                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition"
                             >
-                              Eliminar
+                              🗑
                             </button>
                           </div>
                         </div>
 
                         {isReordering && (
-                          <ul className="mt-3 space-y-1 bg-gray-50 rounded-lg p-2">
+                          <ul className="mt-3 space-y-1.5 bg-gray-50 rounded-lg p-2 border border-gray-100">
                             {group.docs.map((doc, i) => (
                               <li
                                 key={doc.id}
-                                className="flex items-center justify-between bg-white rounded-md border border-gray-200 px-3 py-1.5"
+                                className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2"
                               >
-                                <span className="text-sm text-gray-700">
-                                  {i + 1}. {doc.title}
+                                <span className="text-sm text-gray-700 truncate">
+                                  <span className="text-gray-400 font-medium mr-1.5">
+                                    {i + 1}.
+                                  </span>
+                                  {doc.title}
                                 </span>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 shrink-0">
                                   <button
                                     onClick={() =>
                                       setViewing({
@@ -333,7 +354,8 @@ export default function AdminPanel({
                                       })
                                     }
                                     aria-label="Previsualizar hoja"
-                                    className="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                    title="Previsualizar"
+                                    className="w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 transition"
                                   >
                                     👁
                                   </button>
@@ -341,7 +363,8 @@ export default function AdminPanel({
                                     onClick={() => movePage(group, i, i - 1)}
                                     disabled={i === 0 || savingOrder}
                                     aria-label="Mover arriba"
-                                    className="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Mover arriba"
+                                    className="w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 transition disabled:opacity-30 disabled:cursor-not-allowed"
                                   >
                                     ↑
                                   </button>
@@ -349,14 +372,16 @@ export default function AdminPanel({
                                     onClick={() => movePage(group, i, i + 1)}
                                     disabled={i === group.docs.length - 1 || savingOrder}
                                     aria-label="Mover abajo"
-                                    className="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Mover abajo"
+                                    className="w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 transition disabled:opacity-30 disabled:cursor-not-allowed"
                                   >
                                     ↓
                                   </button>
                                   <button
                                     onClick={() => handleDeletePage(doc)}
                                     aria-label="Eliminar hoja"
-                                    className="w-7 h-7 rounded border border-red-200 text-red-600 hover:bg-red-50"
+                                    title="Eliminar hoja"
+                                    className="w-7 h-7 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition"
                                   >
                                     ✕
                                   </button>
@@ -377,6 +402,7 @@ export default function AdminPanel({
 
       {viewing && (
         <BookViewer
+          key={`${viewing.kind}-${viewing.id}`}
           kind={viewing.kind}
           id={viewing.id}
           title={viewing.title}

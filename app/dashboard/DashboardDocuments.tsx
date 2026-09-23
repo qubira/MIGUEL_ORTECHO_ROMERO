@@ -120,6 +120,7 @@ export default function DashboardDocuments({
 
       {viewing && (
         <BookViewer
+          key={`${viewing.kind}-${viewing.id}`}
           kind={viewing.kind}
           id={viewing.id}
           title={viewing.title}
