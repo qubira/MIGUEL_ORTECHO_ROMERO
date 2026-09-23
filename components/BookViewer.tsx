@@ -105,7 +105,6 @@ export default function BookViewer({
   }, [mode]);
 
   useEffect(() => {
-    if (inline) return;
     const startedAt = Date.now();
     let sent = false;
 
