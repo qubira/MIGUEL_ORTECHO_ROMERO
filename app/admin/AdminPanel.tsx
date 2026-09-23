@@ -325,6 +325,19 @@ export default function AdminPanel({
                                 </span>
                                 <div className="flex gap-1">
                                   <button
+                                    onClick={() =>
+                                      setViewing({
+                                        kind: "single",
+                                        id: doc.id,
+                                        title: `${group.title} — ${doc.title}`,
+                                      })
+                                    }
+                                    aria-label="Previsualizar hoja"
+                                    className="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                  >
+                                    👁
+                                  </button>
+                                  <button
                                     onClick={() => movePage(group, i, i - 1)}
                                     disabled={i === 0 || savingOrder}
                                     aria-label="Mover arriba"
