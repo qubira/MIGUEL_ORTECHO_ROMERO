@@ -7,6 +7,10 @@ import { isValidRedactions } from "@/lib/redaction";
 import { applyRedactions } from "@/lib/redactionRaster";
 import { loadAuthorizedBook, isSecureUnlocked } from "@/lib/bookAccess";
 
+// Un libro de decenas de hojas puede tardar en descargarse/componerse;
+// evita que la función se corte antes de tiempo en hosts como Vercel.
+export const maxDuration = 60;
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ bookId: string }> }
