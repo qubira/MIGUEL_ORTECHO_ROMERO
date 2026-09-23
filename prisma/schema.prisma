@@ -42,6 +42,7 @@ model Document {
   bytes        Int?
   pageNumber   Int      @default(1)
   uploadedAt   DateTime @default(now())
+  redactions   Json?
 
   client   User   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId String

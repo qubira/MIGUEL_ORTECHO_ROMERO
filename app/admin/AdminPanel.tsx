@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import ClientForm from "./ClientForm";
 import UploadForm from "./UploadForm";
 import BookViewer from "@/components/BookViewer";
+import RedactEditor from "@/components/RedactEditor";
 
 type Client = {
   id: string;
@@ -19,6 +20,7 @@ type Document = {
   bytes: number | null;
   pageNumber: number;
   book: { id: string; title: string } | null;
+  redactions?: unknown;
 };
 
 type DocGroup = {
@@ -83,6 +85,9 @@ export default function AdminPanel({
   } | null>(null);
   const [reordering, setReordering] = useState<Set<string>>(new Set());
   const [savingOrder, setSavingOrder] = useState(false);
+  const [redacting, setRedacting] = useState<{ id: string; title: string } | null>(
+    null
+  );
 
   const groups = useMemo(() => groupDocuments(documents), [documents]);
 
@@ -308,6 +313,19 @@ export default function AdminPanel({
                                 </button>
                               </>
                             )}
+                            {group.docs.length === 1 && (
+                              <button
+                                onClick={() =>
+                                  setRedacting({
+                                    id: group.docs[0].id,
+                                    title: group.title,
+                                  })
+                                }
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                              >
+                                <span aria-hidden>🖌</span> Cubrir datos
+                              </button>
+                            )}
                             <button
                               onClick={() =>
                                 setViewing({
@@ -343,6 +361,16 @@ export default function AdminPanel({
                                     {i + 1}.
                                   </span>
                                   {doc.title}
+                                  {Array.isArray(doc.redactions) &&
+                                    doc.redactions.length > 0 && (
+                                      <span
+                                        className="ml-1.5"
+                                        title="Tiene datos cubiertos"
+                                        aria-label="Tiene datos cubiertos"
+                                      >
+                                        🔒
+                                      </span>
+                                    )}
                                 </span>
                                 <div className="flex gap-1 shrink-0">
                                   <button
@@ -358,6 +386,19 @@ export default function AdminPanel({
                                     className="w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 transition"
                                   >
                                     👁
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      setRedacting({
+                                        id: doc.id,
+                                        title: `${group.title} — ${doc.title}`,
+                                      })
+                                    }
+                                    aria-label="Cubrir datos sensibles"
+                                    title="Cubrir datos sensibles"
+                                    className="w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 transition"
+                                  >
+                                    🖌
                                   </button>
                                   <button
                                     onClick={() => movePage(group, i, i - 1)}
@@ -407,6 +448,17 @@ export default function AdminPanel({
           id={viewing.id}
           title={viewing.title}
           onClose={() => setViewing(null)}
+        />
+      )}
+
+      {redacting && (
+        <RedactEditor
+          documentId={redacting.id}
+          title={redacting.title}
+          onClose={() => setRedacting(null)}
+          onSaved={() => {
+            if (selected) loadDocuments(selected.id);
+          }}
         />
       )}
     </div>

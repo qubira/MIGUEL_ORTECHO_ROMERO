@@ -34,6 +34,7 @@ export async function GET(
     pageNumber: doc.pageNumber,
     title: doc.title,
     url: getInlineViewUrl(doc),
+    redactions: doc.redactions,
   }));
 
   return NextResponse.json({ id: book.id, title: book.title, pages });

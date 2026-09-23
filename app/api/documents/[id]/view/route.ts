@@ -31,5 +31,6 @@ export async function GET(
     title: document.title,
     pageNumber: document.pageNumber,
     url: getInlineViewUrl(document),
+    redactions: document.redactions,
   });
 }

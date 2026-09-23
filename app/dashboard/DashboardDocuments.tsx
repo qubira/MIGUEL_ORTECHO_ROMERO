@@ -125,6 +125,7 @@ export default function DashboardDocuments({
           id={viewing.id}
           title={viewing.title}
           onClose={() => setViewing(null)}
+          redactable
         />
       )}
     </>

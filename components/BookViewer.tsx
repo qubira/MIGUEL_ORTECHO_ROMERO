@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { RedactionStroke } from "@/lib/redaction";
 
 type Page = {
   id: string;
   pageNumber: number;
   title: string;
   url: string;
+  redactions?: RedactionStroke[] | null;
 };
 
 type ViewMode = "spread" | "single";
@@ -34,18 +36,46 @@ function MagnifierIcon() {
   );
 }
 
+function pageHasRedactions(page: Page) {
+  return Array.isArray(page.redactions) && page.redactions.length > 0;
+}
+
+function RedactionOverlay({ strokes }: { strokes: RedactionStroke[] }) {
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox="0 0 1 1"
+      preserveAspectRatio="none"
+    >
+      {strokes.map((s, i) => (
+        <polyline
+          key={i}
+          points={s.points.map((p) => `${p.x},${p.y}`).join(" ")}
+          fill="none"
+          stroke="black"
+          strokeWidth={s.size}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ))}
+    </svg>
+  );
+}
+
 export default function BookViewer({
   kind,
   id,
   title,
   onClose,
   inline = false,
+  redactable = false,
 }: {
   kind: "book" | "single";
   id: string;
   title: string;
   onClose?: () => void;
   inline?: boolean;
+  redactable?: boolean;
 }) {
   const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +83,11 @@ export default function BookViewer({
   const [mode, setMode] = useState<ViewMode>("spread");
   const [index, setIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
+  const [secureUnlocked, setSecureUnlocked] = useState(false);
+  const [showUnlock, setShowUnlock] = useState(false);
+  const [password, setPassword] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -72,7 +107,13 @@ export default function BookViewer({
           if (!res.ok) throw new Error(data.error || "No se pudo cargar el documento.");
           if (!cancelled) {
             setPages([
-              { id: data.id, pageNumber: 1, title: data.title, url: data.url },
+              {
+                id: data.id,
+                pageNumber: 1,
+                title: data.title,
+                url: data.url,
+                redactions: data.redactions,
+              },
             ]);
           }
         }
@@ -127,11 +168,36 @@ export default function BookViewer({
     setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)));
   }
 
+  async function handleVerify(e: React.FormEvent) {
+    e.preventDefault();
+    setVerifying(true);
+    setVerifyError("");
+    try {
+      const res = await fetch("/api/verify-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Contraseña incorrecta.");
+      setSecureUnlocked(true);
+      setShowUnlock(false);
+      setPassword("");
+    } catch (err: any) {
+      setVerifyError(err.message || "Contraseña incorrecta.");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   const spreadPages = pages.slice(index, index + 2);
   const atStart = index === 0;
   const atEnd = index + 2 >= pages.length;
   const spreadBaseVh = inline ? 62 : 78;
   const singleBaseVh = inline ? 62 : 76;
+  const hasRedactions = redactable && pages.some(pageHasRedactions);
+  const showOverlayOn = (page: Page) =>
+    redactable && !secureUnlocked && pageHasRedactions(page);
 
   // Zoom resizes the image itself (real height) instead of a CSS transform,
   // so the bounding box's overflow-auto can actually scroll to the parts
@@ -197,6 +263,19 @@ export default function BookViewer({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {zoomControl}
+          {hasRedactions &&
+            (secureUnlocked ? (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-500/10 text-emerald-300 px-2.5 py-1.5 text-xs font-medium">
+                🔓 Modo seguro activo
+              </span>
+            ) : (
+              <button
+                onClick={() => setShowUnlock((v) => !v)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 px-3 py-1.5 text-xs font-medium text-gray-200 hover:bg-white/10 transition"
+              >
+                🔒 Modo seguro
+              </button>
+            ))}
           {pages.length > 1 && (
             <div className="flex rounded-lg overflow-hidden border border-white/20">
               <button
@@ -236,6 +315,45 @@ export default function BookViewer({
         </div>
       </div>
 
+      {showUnlock && !secureUnlocked && (
+        <form
+          onSubmit={handleVerify}
+          className="flex flex-wrap items-center gap-2 px-4 py-2 bg-navy-800 border-b border-white/10"
+        >
+          <span className="text-xs text-gray-300">
+            Ingresa tu contraseña para ver los datos cubiertos:
+          </span>
+          <input
+            type="password"
+            required
+            autoFocus
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Contraseña"
+            className="rounded-lg border border-white/20 bg-white/5 px-2.5 py-1.5 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gold-500 max-w-[180px]"
+          />
+          <button
+            type="submit"
+            disabled={verifying}
+            className="inline-flex items-center rounded-lg bg-gold-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-gold-500 transition disabled:opacity-50"
+          >
+            {verifying ? "Verificando..." : "Desbloquear"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowUnlock(false);
+              setPassword("");
+              setVerifyError("");
+            }}
+            className="text-xs text-gray-300 hover:underline"
+          >
+            Cancelar
+          </button>
+          {verifyError && <span className="text-xs text-red-300">{verifyError}</span>}
+        </form>
+      )}
+
       {loading && (
         <div className={`${inline ? "py-10" : "flex-1"} flex items-center justify-center`}>
           <p className="text-gray-200 text-sm">Cargando documento...</p>
@@ -271,11 +389,16 @@ export default function BookViewer({
                 }`}
                 style={{ maxHeight: `${spreadBaseVh}vh`, maxWidth: "44vw" }}
               >
-                <img
-                  src={page.url}
-                  alt={page.title}
-                  style={pageImageStyle(spreadBaseVh)}
-                />
+                <div className="relative inline-block">
+                  <img
+                    src={page.url}
+                    alt={page.title}
+                    style={pageImageStyle(spreadBaseVh)}
+                  />
+                  {showOverlayOn(page) && (
+                    <RedactionOverlay strokes={page.redactions as RedactionStroke[]} />
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -293,15 +416,25 @@ export default function BookViewer({
 
       {!loading && !error && mode === "spread" && spreadPages.length > 0 && (
         <div className="flex justify-center gap-3 py-3 bg-navy-900 border-t border-white/10">
-          {spreadPages.map((page) => (
-            <a
-              key={page.id}
-              href={`/api/documents/${page.id}/download`}
-              className="btn-secondary text-xs"
-            >
-              Descargar hoja {page.pageNumber}
-            </a>
-          ))}
+          {spreadPages.map((page) =>
+            showOverlayOn(page) ? (
+              <span
+                key={page.id}
+                title="Desbloquea el modo seguro para descargar esta hoja"
+                className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-gray-500 cursor-not-allowed"
+              >
+                🔒 Hoja {page.pageNumber}
+              </span>
+            ) : (
+              <a
+                key={page.id}
+                href={`/api/documents/${page.id}/download`}
+                className="btn-secondary text-xs"
+              >
+                Descargar hoja {page.pageNumber}
+              </a>
+            )
+          )}
         </div>
       )}
 
@@ -318,22 +451,36 @@ export default function BookViewer({
                     width: "fit-content",
                   }}
                 >
-                  <img
-                    src={page.url}
-                    alt={page.title}
-                    style={pageImageStyle(singleBaseVh)}
-                  />
+                  <div className="relative inline-block">
+                    <img
+                      src={page.url}
+                      alt={page.title}
+                      style={pageImageStyle(singleBaseVh)}
+                    />
+                    {showOverlayOn(page) && (
+                      <RedactionOverlay strokes={page.redactions as RedactionStroke[]} />
+                    )}
+                  </div>
                 </div>
                 <div className="w-full flex items-center justify-between px-1 pt-2">
                   <span className="text-xs text-gray-300">
                     Página {page.pageNumber} de {pages.length}
                   </span>
-                  <a
-                    href={`/api/documents/${page.id}/download`}
-                    className="btn-secondary text-xs"
-                  >
-                    Descargar
-                  </a>
+                  {showOverlayOn(page) ? (
+                    <span
+                      title="Desbloquea el modo seguro para descargar esta hoja"
+                      className="text-xs text-gray-500 cursor-not-allowed"
+                    >
+                      🔒 Protegida
+                    </span>
+                  ) : (
+                    <a
+                      href={`/api/documents/${page.id}/download`}
+                      className="btn-secondary text-xs"
+                    >
+                      Descargar
+                    </a>
+                  )}
                 </div>
               </div>
             ))}

@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import cloudinary from "@/lib/cloudinary";
+import { SECURE_MODE_COOKIE, verifySecureModeToken } from "@/lib/secureMode";
+import { isValidRedactions } from "@/lib/redaction";
 
 export async function GET(
   req: NextRequest,
@@ -27,6 +29,16 @@ export async function GET(
   const isAdmin = session.user.role === "ADMIN";
   if (!isOwner && !isAdmin) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  if (!isAdmin && isValidRedactions(document.redactions) && document.redactions.length > 0) {
+    const token = req.cookies.get(SECURE_MODE_COOKIE)?.value;
+    if (!verifySecureModeToken(token, session.user.id)) {
+      return NextResponse.json(
+        { error: "Esta hoja tiene datos protegidos. Activa el modo seguro con tu contraseña para descargarla." },
+        { status: 403 }
+      );
+    }
   }
 
   const expiresAt = Math.floor(Date.now() / 1000) + 60; // 60 segundos
