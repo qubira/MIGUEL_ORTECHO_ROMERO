@@ -16,11 +16,13 @@ export default function BookViewer({
   id,
   title,
   onClose,
+  inline = false,
 }: {
   kind: "book" | "single";
   id: string;
   title: string;
-  onClose: () => void;
+  onClose?: () => void;
+  inline?: boolean;
 }) {
   const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,8 +70,9 @@ export default function BookViewer({
   }, [pages, mode]);
 
   useEffect(() => {
+    if (inline) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onClose?.();
       if (mode === "spread") {
         if (e.key === "ArrowRight") goNext();
         if (e.key === "ArrowLeft") goPrev();
@@ -78,7 +81,7 @@ export default function BookViewer({
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, mode, pages]);
+  }, [index, mode, pages, inline]);
 
   function goNext() {
     setIndex((i) => Math.min(i + 2, Math.max(pages.length - 2, 0)));
@@ -93,7 +96,13 @@ export default function BookViewer({
   const atEnd = index + 2 >= pages.length;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex flex-col">
+    <div
+      className={
+        inline
+          ? "bg-navy-900 rounded-xl overflow-hidden flex flex-col"
+          : "fixed inset-0 z-50 bg-black/80 flex flex-col"
+      }
+    >
       <div className="flex items-center justify-between px-4 py-3 bg-navy-900 text-white">
         <div className="min-w-0">
           <h3 className="font-semibold truncate">{title}</h3>
@@ -131,25 +140,31 @@ export default function BookViewer({
               </button>
             </div>
           )}
-          <button onClick={onClose} className="btn-secondary">
-            Cerrar
-          </button>
+          {!inline && (
+            <button onClick={onClose} className="btn-secondary">
+              Cerrar
+            </button>
+          )}
         </div>
       </div>
 
       {loading && (
-        <div className="flex-1 flex items-center justify-center">
+        <div className={`${inline ? "py-10" : "flex-1"} flex items-center justify-center`}>
           <p className="text-gray-200 text-sm">Cargando documento...</p>
         </div>
       )}
       {error && (
-        <div className="flex-1 flex items-center justify-center">
+        <div className={`${inline ? "py-10" : "flex-1"} flex items-center justify-center`}>
           <p className="text-red-300 text-sm">{error}</p>
         </div>
       )}
 
       {!loading && !error && mode === "spread" && (
-        <div className="flex-1 flex items-center justify-center relative px-4 overflow-hidden">
+        <div
+          className={`${
+            inline ? "py-6" : "flex-1"
+          } flex items-center justify-center relative px-4 overflow-hidden`}
+        >
           <button
             onClick={goPrev}
             disabled={atStart}
@@ -159,19 +174,25 @@ export default function BookViewer({
             ‹
           </button>
 
-          <div className="flex items-stretch gap-0 max-h-[80vh] bg-[#e9e2d0] shadow-2xl">
+          <div
+            className={`flex items-stretch gap-0 bg-[#e9e2d0] shadow-2xl ${
+              inline ? "max-h-[65vh]" : "max-h-[80vh]"
+            }`}
+          >
             {spreadPages.map((page, i) => (
               <div
                 key={page.id}
                 className={`bg-white flex items-center justify-center overflow-hidden relative ${
                   i === 0 ? "border-r border-black/10" : ""
                 }`}
-                style={{ maxHeight: "80vh" }}
+                style={{ maxHeight: inline ? "65vh" : "80vh" }}
               >
                 <img
                   src={page.url}
                   alt={page.title}
-                  className="max-h-[80vh] max-w-full object-contain"
+                  className={`max-w-full object-contain ${
+                    inline ? "max-h-[65vh]" : "max-h-[80vh]"
+                  }`}
                 />
               </div>
             ))}
@@ -206,7 +227,11 @@ export default function BookViewer({
       )}
 
       {!loading && !error && mode === "single" && (
-        <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div
+          className={`px-4 py-6 ${
+            inline ? "" : "flex-1 overflow-y-auto"
+          }`}
+        >
           <div className="max-w-3xl mx-auto flex flex-col gap-6">
             {pages.map((page) => (
               <div key={page.id} className="bg-white shadow-2xl">
