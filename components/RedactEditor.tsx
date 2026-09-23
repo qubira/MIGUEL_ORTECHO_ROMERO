@@ -3,6 +3,30 @@
 import { useEffect, useRef, useState } from "react";
 import type { RedactionStroke } from "@/lib/redaction";
 
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 4;
+const ZOOM_STEP = 0.5;
+const BASE_VH = 78;
+
+function MagnifierIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
 export default function RedactEditor({
   documentId,
   title,
@@ -20,8 +44,12 @@ export default function RedactEditor({
   const [saving, setSaving] = useState(false);
   const [strokes, setStrokes] = useState<RedactionStroke[]>([]);
   const [brushSize, setBrushSize] = useState(0.03);
+  const [zoom, setZoom] = useState(1);
   const drawingRef = useRef(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Points are captured against this element, which is sized to exactly
+  // match the (possibly zoomed) image — not the clipped scroll viewport —
+  // so getBoundingClientRect() already accounts for any scroll offset.
+  const imageWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,8 +78,16 @@ export default function RedactEditor({
     };
   }, [documentId]);
 
+  function zoomIn() {
+    setZoom((z) => Math.min(MAX_ZOOM, +(z + ZOOM_STEP).toFixed(2)));
+  }
+
+  function zoomOut() {
+    setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)));
+  }
+
   function getRelativePoint(e: React.PointerEvent) {
-    const rect = containerRef.current!.getBoundingClientRect();
+    const rect = imageWrapRef.current!.getBoundingClientRect();
     const x = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
     const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
     return { x, y };
@@ -121,6 +157,30 @@ export default function RedactEditor({
           <p className="text-xs text-gray-300 truncate">{title}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-1.5 py-1">
+            <span className="text-gray-400 pl-0.5">
+              <MagnifierIcon />
+            </span>
+            <button
+              onClick={zoomOut}
+              disabled={zoom <= MIN_ZOOM}
+              aria-label="Reducir zoom"
+              className="w-6 h-6 flex items-center justify-center rounded text-gray-200 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
+            >
+              −
+            </button>
+            <span className="w-10 text-center text-xs text-gray-300 tabular-nums select-none">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={zoomIn}
+              disabled={zoom >= MAX_ZOOM}
+              aria-label="Aumentar zoom"
+              className="w-6 h-6 flex items-center justify-center rounded text-gray-200 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
+            >
+              +
+            </button>
+          </div>
           <label className="flex items-center gap-2 text-xs text-gray-300">
             Grosor
             <input
@@ -170,44 +230,51 @@ export default function RedactEditor({
 
         {!loading && imageUrl && (
           <div
-            ref={containerRef}
-            className="relative bg-white shadow-2xl touch-none select-none"
-            style={{ maxWidth: "90vw", maxHeight: "78vh", width: "fit-content" }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerLeave={handlePointerUp}
+            className="overflow-auto bg-black/20"
+            style={{ maxWidth: "90vw", maxHeight: `${BASE_VH}vh` }}
           >
-            <img
-              src={imageUrl}
-              alt={title}
-              draggable={false}
-              className="block max-w-[90vw] max-h-[78vh] object-contain select-none pointer-events-none"
-            />
-            <svg
-              className="absolute inset-0 w-full h-full"
-              viewBox="0 0 1 1"
-              preserveAspectRatio="none"
+            <div
+              ref={imageWrapRef}
+              className="relative bg-white shadow-2xl touch-none select-none"
+              style={{ width: "fit-content" }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerLeave={handlePointerUp}
             >
-              {strokes.map((s, i) => (
-                <polyline
-                  key={i}
-                  points={s.points.map((p) => `${p.x},${p.y}`).join(" ")}
-                  fill="none"
-                  stroke="black"
-                  strokeWidth={s.size}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              ))}
-            </svg>
+              <img
+                src={imageUrl}
+                alt={title}
+                draggable={false}
+                className="block max-w-none select-none pointer-events-none"
+                style={{ height: `${BASE_VH * zoom}vh`, width: "auto" }}
+              />
+              <svg
+                className="absolute inset-0 w-full h-full"
+                viewBox="0 0 1 1"
+                preserveAspectRatio="none"
+              >
+                {strokes.map((s, i) => (
+                  <polyline
+                    key={i}
+                    points={s.points.map((p) => `${p.x},${p.y}`).join(" ")}
+                    fill="none"
+                    stroke="black"
+                    strokeWidth={s.size}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                ))}
+              </svg>
+            </div>
           </div>
         )}
       </div>
 
       <p className="text-center text-xs text-gray-400 pb-3 px-4">
-        Dibuja sobre los datos que quieras cubrir. El cliente no verá esa zona,
-        salvo que active el modo seguro con su propia contraseña.
+        Dibuja sobre los datos que quieras cubrir. Usa el zoom para más
+        precisión. El cliente no verá esa zona, salvo que active el modo
+        seguro con su propia contraseña.
       </p>
     </div>
   );
