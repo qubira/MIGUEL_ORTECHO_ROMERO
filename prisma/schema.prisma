@@ -20,6 +20,17 @@ model User {
   role         Role       @default(CLIENT)
   createdAt    DateTime   @default(now())
   documents    Document[]
+  books        Book[]
+}
+
+model Book {
+  id        String     @id @default(cuid())
+  title     String
+  createdAt DateTime   @default(now())
+  documents Document[]
+
+  client   User   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String
 }
 
 model Document {
@@ -29,8 +40,12 @@ model Document {
   format       String?
   resourceType String   @default("raw")
   bytes        Int?
+  pageNumber   Int      @default(1)
   uploadedAt   DateTime @default(now())
 
   client   User   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId String
+
+  book   Book?   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  bookId String?
 }

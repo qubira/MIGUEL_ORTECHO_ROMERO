@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ClientForm from "./ClientForm";
 import UploadForm from "./UploadForm";
+import BookViewer from "@/components/BookViewer";
 
 type Client = {
   id: string;
@@ -16,6 +17,16 @@ type Document = {
   title: string;
   uploadedAt: string;
   bytes: number | null;
+  pageNumber: number;
+  book: { id: string; title: string } | null;
+};
+
+type DocGroup = {
+  key: string;
+  title: string;
+  isBook: boolean;
+  uploadedAt: string;
+  docs: Document[];
 };
 
 function formatBytes(bytes: number | null) {
@@ -23,6 +34,34 @@ function formatBytes(bytes: number | null) {
   const kb = bytes / 1024;
   if (kb < 1024) return `${kb.toFixed(0)} KB`;
   return `${(kb / 1024).toFixed(1)} MB`;
+}
+
+function groupDocuments(documents: Document[]): DocGroup[] {
+  const groups: DocGroup[] = [];
+  const index = new Map<string, DocGroup>();
+
+  for (const doc of documents) {
+    const key = doc.book?.id || doc.id;
+    let group = index.get(key);
+    if (!group) {
+      group = {
+        key,
+        title: doc.book?.title || doc.title,
+        isBook: !!doc.book,
+        uploadedAt: doc.uploadedAt,
+        docs: [],
+      };
+      index.set(key, group);
+      groups.push(group);
+    }
+    group.docs.push(doc);
+  }
+
+  for (const group of groups) {
+    group.docs.sort((a, b) => a.pageNumber - b.pageNumber);
+  }
+
+  return groups;
 }
 
 export default function AdminPanel({
@@ -37,6 +76,13 @@ export default function AdminPanel({
   const [documents, setDocuments] = useState<Document[]>([]);
   const [showClientForm, setShowClientForm] = useState(clients.length === 0);
   const [loadingDocs, setLoadingDocs] = useState(false);
+  const [viewing, setViewing] = useState<{
+    kind: "book" | "single";
+    id: string;
+    title: string;
+  } | null>(null);
+
+  const groups = useMemo(() => groupDocuments(documents), [documents]);
 
   async function loadDocuments(clientId: string) {
     setLoadingDocs(true);
@@ -50,11 +96,18 @@ export default function AdminPanel({
     if (selected) loadDocuments(selected.id);
   }, [selected]);
 
-  async function handleDelete(docId: string) {
-    if (!confirm("¿Eliminar este documento? Esta acción no se puede deshacer.")) {
+  async function handleDeleteGroup(group: DocGroup) {
+    const label = group.isBook
+      ? `el libro "${group.title}" (${group.docs.length} hojas)`
+      : "este documento";
+    if (!confirm(`¿Eliminar ${label}? Esta acción no se puede deshacer.`)) {
       return;
     }
-    await fetch(`/api/admin/documents/${docId}`, { method: "DELETE" });
+    if (group.isBook) {
+      await fetch(`/api/admin/books/${group.key}`, { method: "DELETE" });
+    } else {
+      await fetch(`/api/admin/documents/${group.key}`, { method: "DELETE" });
+    }
     if (selected) loadDocuments(selected.id);
   }
 
@@ -143,42 +196,68 @@ export default function AdminPanel({
                 </p>
               ) : (
                 <div className="divide-y divide-gray-200">
-                  {documents.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
-                    >
-                      <div>
-                        <p className="font-medium text-gray-800 text-sm">
-                          {doc.title}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(doc.uploadedAt).toLocaleDateString("es-PE")}
-                          {doc.bytes ? ` · ${formatBytes(doc.bytes)}` : ""}
-                        </p>
+                  {groups.map((group) => {
+                    const totalBytes = group.docs.reduce(
+                      (sum, d) => sum + (d.bytes || 0),
+                      0
+                    );
+                    return (
+                      <div
+                        key={group.key}
+                        className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                      >
+                        <div>
+                          <p className="font-medium text-gray-800 text-sm">
+                            {group.title}
+                            {group.isBook && (
+                              <span className="ml-2 text-xs font-normal text-gold-600">
+                                {group.docs.length} hojas
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(group.uploadedAt).toLocaleDateString("es-PE")}
+                            {totalBytes ? ` · ${formatBytes(totalBytes)}` : ""}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() =>
+                              setViewing({
+                                kind: group.isBook ? "book" : "single",
+                                id: group.key,
+                                title: group.title,
+                              })
+                            }
+                            className="btn-secondary"
+                          >
+                            Ver
+                          </button>
+                          <button
+                            onClick={() => handleDeleteGroup(group)}
+                            className="btn-danger"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <a
-                          href={`/api/documents/${doc.id}/download`}
-                          className="btn-secondary"
-                        >
-                          Descargar
-                        </a>
-                        <button
-                          onClick={() => handleDelete(doc.id)}
-                          className="btn-danger"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           </>
         )}
       </div>
+
+      {viewing && (
+        <BookViewer
+          kind={viewing.kind}
+          id={viewing.id}
+          title={viewing.title}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   );
 }
