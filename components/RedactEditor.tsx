@@ -8,6 +8,10 @@ const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.5;
 const BASE_VH = 78;
 
+const MIN_BRUSH_PCT = 1;
+const MAX_BRUSH_PCT = 8;
+const BRUSH_STEP = 0.5;
+
 function MagnifierIcon() {
   return (
     <svg
@@ -84,6 +88,14 @@ export default function RedactEditor({
 
   function zoomOut() {
     setZoom((z) => Math.max(MIN_ZOOM, +(z - ZOOM_STEP).toFixed(2)));
+  }
+
+  const brushPercent = +(brushSize * 100).toFixed(2);
+
+  function setBrushPercent(pct: number) {
+    if (!Number.isFinite(pct)) return;
+    const clamped = Math.min(MAX_BRUSH_PCT, Math.max(MIN_BRUSH_PCT, pct));
+    setBrushSize(+(clamped / 100).toFixed(4));
   }
 
   function getRelativePoint(e: React.PointerEvent) {
@@ -181,18 +193,35 @@ export default function RedactEditor({
               +
             </button>
           </div>
-          <label className="flex items-center gap-2 text-xs text-gray-300">
-            Grosor
+          <div className="flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-1.5 py-1">
+            <span className="text-xs text-gray-300 pl-1">Grosor</span>
+            <button
+              onClick={() => setBrushPercent(brushPercent - BRUSH_STEP)}
+              disabled={brushPercent <= MIN_BRUSH_PCT}
+              aria-label="Reducir grosor"
+              className="w-6 h-6 flex items-center justify-center rounded text-gray-200 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
+            >
+              −
+            </button>
             <input
-              type="range"
-              min={0.01}
-              max={0.08}
-              step={0.005}
-              value={brushSize}
-              onChange={(e) => setBrushSize(Number(e.target.value))}
-              className="w-24 align-middle"
+              type="number"
+              min={MIN_BRUSH_PCT}
+              max={MAX_BRUSH_PCT}
+              step={BRUSH_STEP}
+              value={brushPercent}
+              onChange={(e) => setBrushPercent(Number(e.target.value))}
+              className="w-11 bg-transparent text-center text-xs text-gray-200 tabular-nums focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-          </label>
+            <span className="text-xs text-gray-400 pr-0.5">%</span>
+            <button
+              onClick={() => setBrushPercent(brushPercent + BRUSH_STEP)}
+              disabled={brushPercent >= MAX_BRUSH_PCT}
+              aria-label="Aumentar grosor"
+              className="w-6 h-6 flex items-center justify-center rounded text-gray-200 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-base leading-none"
+            >
+              +
+            </button>
+          </div>
           <button
             onClick={undo}
             disabled={strokes.length === 0}
