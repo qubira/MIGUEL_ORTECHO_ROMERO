@@ -22,6 +22,10 @@ model User {
   documents    Document[]
   books        Book[]
 
+  failedLoginAttempts Int       @default(0)
+  firstFailedLoginAt  DateTime?
+  lockedUntil         DateTime?
+
   auditLogsActed  AuditLog[] @relation("AuditActor")
   auditLogsTarget AuditLog[] @relation("AuditTarget")
 }

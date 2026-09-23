@@ -25,7 +25,11 @@ export default function LoginForm() {
     setLoading(false);
 
     if (!res || res.error) {
-      setError("Usuario o contraseña incorrectos.");
+      const message =
+        res?.error && res.error !== "CredentialsSignin"
+          ? res.error
+          : "Usuario o contraseña incorrectos.";
+      setError(message);
       return;
     }
 

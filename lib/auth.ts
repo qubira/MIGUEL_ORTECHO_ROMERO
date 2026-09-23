@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/auditLog";
 import { getClientIp, getUserAgent } from "@/lib/requestMeta";
+import { registerFailedLogin, clearLoginFailures, minutesRemaining } from "@/lib/loginLockout";
 
 export const authOptions: AuthOptions = {
   session: { strategy: "jwt" },
@@ -26,8 +27,28 @@ export const authOptions: AuthOptions = {
         });
         if (!user) return null;
 
+        if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
+          const minutes = minutesRemaining(user.lockedUntil);
+          throw new Error(
+            `Cuenta bloqueada temporalmente por varios intentos fallidos. Intenta de nuevo en ${minutes} minuto${minutes === 1 ? "" : "s"}.`
+          );
+        }
+
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          const lockedUntil = await registerFailedLogin(user);
+          if (lockedUntil) {
+            const minutes = minutesRemaining(lockedUntil);
+            throw new Error(
+              `Demasiados intentos fallidos. Tu cuenta quedó bloqueada temporalmente por ${minutes} minutos.`
+            );
+          }
+          return null;
+        }
+
+        if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+          await clearLoginFailures(user.id);
+        }
 
         await logAudit({
           action: "LOGIN",

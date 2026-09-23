@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RedactionStroke } from "@/lib/redaction";
 
 type Page = {
@@ -95,6 +95,53 @@ export default function BookViewer({
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState("");
+
+  // Para registrar en la auditoría cuánto tiempo se quedó viendo y en qué
+  // modo, sin quedar atado al valor de "mode" del momento en que se montó
+  // el efecto (closure obsoleta).
+  const modeRef = useRef(mode);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
+  useEffect(() => {
+    if (inline) return;
+    const startedAt = Date.now();
+    let sent = false;
+
+    function sendViewSession() {
+      if (sent) return;
+      sent = true;
+      const seconds = Math.round((Date.now() - startedAt) / 1000);
+      const payload = JSON.stringify({ kind, id, seconds, mode: modeRef.current });
+      try {
+        navigator.sendBeacon(
+          "/api/documents/view-session",
+          new Blob([payload], { type: "application/json" })
+        );
+      } catch {
+        fetch("/api/documents/view-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    }
+
+    function handleVisibility() {
+      if (document.visibilityState === "hidden") sendViewSession();
+    }
+
+    window.addEventListener("pagehide", sendViewSession);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      sendViewSession();
+      window.removeEventListener("pagehide", sendViewSession);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind, id, inline]);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,15 +257,21 @@ export default function BookViewer({
   const showOverlayOn = (page: Page) =>
     redactable && !secureUnlocked && pageHasRedactions(page);
 
-  // Zoom resizes the image itself (real height) instead of a CSS transform,
-  // so the bounding box's overflow-auto can actually scroll to the parts
-  // that grow past it — a scaled transform on a centered flex child gets
-  // clipped instead of becoming scrollable in most browsers.
+  // Zoom escala maxWidth y maxHeight juntos (en vez de fijar "height" y topar
+  // solo el ancho): así el navegador sigue calculando el tamaño real a partir
+  // del alto Y el ancho disponibles, preservando la proporción de la imagen.
+  // Fijar solo la altura y capar el ancho por separado (como antes) hacía que
+  // en pantallas angostas (celular, o "Libro abierto" con columnas de 44vw)
+  // el navegador achicara el ancho pero mantuviera la altura, deformando la
+  // imagen. Al crecer ambos límites igual con el zoom, el "encaje" es siempre
+  // proporcional y solo se ve recortada (con scroll) la parte que excede el
+  // contenedor, que sí mantiene su tamaño fijo.
   function pageImageStyle(baseVh: number) {
     return {
-      height: `${baseVh * zoom}vh`,
+      maxHeight: `${baseVh * zoom}vh`,
+      maxWidth: `${zoom * 100}%`,
       width: "auto" as const,
-      maxWidth: zoom <= 1 ? "100%" : "none",
+      height: "auto" as const,
       display: "block" as const,
       margin: "0 auto",
     };
