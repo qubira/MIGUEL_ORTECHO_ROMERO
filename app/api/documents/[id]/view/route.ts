@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getInlineViewUrl } from "@/lib/cloudinaryView";
+import { logAudit } from "@/lib/auditLog";
+import { getClientIp, getUserAgent } from "@/lib/requestMeta";
 
 export async function GET(
   req: NextRequest,
@@ -25,6 +27,15 @@ export async function GET(
   if (!isOwner && !isAdmin) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
+
+  await logAudit({
+    action: "DOCUMENT_VIEW",
+    actorId: session.user.id,
+    targetUserId: document.clientId,
+    detail: `${isAdmin ? "Admin visualizó" : "Visualizó"} la hoja: "${document.title}"`,
+    ip: getClientIp(req.headers),
+    userAgent: getUserAgent(req.headers),
+  });
 
   return NextResponse.json({
     id: document.id,

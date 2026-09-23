@@ -38,6 +38,10 @@ const ACTION_META: Record<string, { label: string; className: string }> = {
     label: "Modo seguro activado",
     className: "bg-red-50 text-red-700 border-red-200",
   },
+  DOCUMENT_VIEW: {
+    label: "Vio documento",
+    className: "bg-gray-100 text-gray-700 border-gray-300",
+  },
 };
 
 function formatDateTime(iso: string) {

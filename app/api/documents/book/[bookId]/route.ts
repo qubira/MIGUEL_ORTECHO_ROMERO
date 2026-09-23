@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getInlineViewUrl } from "@/lib/cloudinaryView";
+import { logAudit } from "@/lib/auditLog";
+import { getClientIp, getUserAgent } from "@/lib/requestMeta";
 
 export async function GET(
   req: NextRequest,
@@ -36,6 +38,15 @@ export async function GET(
     url: getInlineViewUrl(doc),
     redactions: doc.redactions,
   }));
+
+  await logAudit({
+    action: "DOCUMENT_VIEW",
+    actorId: session.user.id,
+    targetUserId: book.clientId,
+    detail: `${isAdmin ? "Admin visualizó" : "Visualizó"} el libro: "${book.title}" (${book.documents.length} hojas)`,
+    ip: getClientIp(req.headers),
+    userAgent: getUserAgent(req.headers),
+  });
 
   return NextResponse.json({ id: book.id, title: book.title, pages });
 }

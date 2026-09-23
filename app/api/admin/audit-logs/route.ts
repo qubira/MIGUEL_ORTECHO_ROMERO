@@ -9,6 +9,7 @@ const VALID_ACTIONS: AuditAction[] = [
   "NAME_CHANGE",
   "DOWNLOAD",
   "SECURE_MODE_UNLOCK",
+  "DOCUMENT_VIEW",
 ];
 
 export async function GET(req: NextRequest) {

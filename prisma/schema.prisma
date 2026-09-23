@@ -32,6 +32,7 @@ enum AuditAction {
   NAME_CHANGE
   DOWNLOAD
   SECURE_MODE_UNLOCK
+  DOCUMENT_VIEW
 }
 
 model AuditLog {
