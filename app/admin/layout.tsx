@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
+import ProfileToggle from "@/components/ProfileToggle";
 
 export default async function AdminLayout({
   children,
@@ -21,7 +22,10 @@ export default async function AdminLayout({
             <p className="text-sm text-gray-300">Panel de administrador</p>
             <h1 className="text-lg font-semibold">{session.user.name}</h1>
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-2">
+            <ProfileToggle username={session.user.username} />
+            <LogoutButton />
+          </div>
         </div>
       </header>
       <div className="max-w-5xl mx-auto px-4 py-8">{children}</div>

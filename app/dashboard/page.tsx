@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import LogoutButton from "@/components/LogoutButton";
+import ProfileToggle from "@/components/ProfileToggle";
 import DashboardDocuments from "./DashboardDocuments";
 
 export default async function DashboardPage() {
@@ -29,7 +30,10 @@ export default async function DashboardPage() {
             <p className="text-sm text-gray-300">Bienvenido/a</p>
             <h1 className="text-lg font-semibold">{session?.user.name}</h1>
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-2">
+            <ProfileToggle username={session!.user.username} />
+            <LogoutButton />
+          </div>
         </div>
       </header>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ClientForm from "./ClientForm";
+import EditClientForm from "./EditClientForm";
 import UploadForm from "./UploadForm";
 import BookViewer from "@/components/BookViewer";
 import RedactEditor from "@/components/RedactEditor";
@@ -88,6 +89,7 @@ export default function AdminPanel({
   const [redacting, setRedacting] = useState<{ id: string; title: string } | null>(
     null
   );
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   const groups = useMemo(() => groupDocuments(documents), [documents]);
 
@@ -201,23 +203,35 @@ export default function AdminPanel({
           ) : (
             <ul className="divide-y divide-gray-200">
               {clients.map((c) => (
-                <li key={c.id}>
+                <li key={c.id} className="flex items-center gap-1">
                   <button
                     onClick={() => setSelected(c)}
-                    className={`w-full text-left py-2 px-2 rounded-lg transition ${
+                    className={`flex-1 min-w-0 text-left py-2 px-2 rounded-lg transition ${
                       selected?.id === c.id
                         ? "bg-navy-800 text-white"
                         : "hover:bg-gray-100"
                     }`}
                   >
-                    <p className="text-sm font-medium">{c.name}</p>
+                    <p className="text-sm font-medium truncate">{c.name}</p>
                     <p
-                      className={`text-xs ${
+                      className={`text-xs truncate ${
                         selected?.id === c.id ? "text-gray-300" : "text-gray-500"
                       }`}
                     >
                       {c.username}
                     </p>
+                  </button>
+                  <button
+                    onClick={() => setEditingClient(c)}
+                    aria-label={`Editar ${c.name}`}
+                    title="Editar cliente"
+                    className={`w-7 h-7 shrink-0 rounded-md flex items-center justify-center transition ${
+                      selected?.id === c.id
+                        ? "text-gray-300 hover:bg-gray-200/20"
+                        : "text-gray-500 hover:bg-gray-100"
+                    }`}
+                  >
+                    ✏️
                   </button>
                 </li>
               ))}
@@ -458,6 +472,19 @@ export default function AdminPanel({
           onClose={() => setRedacting(null)}
           onSaved={() => {
             if (selected) loadDocuments(selected.id);
+          }}
+        />
+      )}
+
+      {editingClient && (
+        <EditClientForm
+          client={editingClient}
+          onClose={() => setEditingClient(null)}
+          onSaved={(updated) => {
+            setClients((prev) =>
+              prev.map((c) => (c.id === updated.id ? updated : c))
+            );
+            setSelected((prev) => (prev?.id === updated.id ? updated : prev));
           }}
         />
       )}
