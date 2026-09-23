@@ -80,7 +80,14 @@ export default function BookViewer({
   const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState<ViewMode>("spread");
+  // En pantallas angostas dos páginas de "Libro abierto" caben en menos de
+  // 180px cada una y quedan ilegibles; en celular arranca en "Individual"
+  // (el usuario igual puede cambiar a "Libro abierto" si lo prefiere). Este
+  // componente solo se monta tras una interacción del usuario (nunca en el
+  // render de servidor), así que leer window aquí es seguro.
+  const [mode, setMode] = useState<ViewMode>(() =>
+    typeof window !== "undefined" && window.innerWidth < 640 ? "single" : "spread"
+  );
   const [index, setIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [secureUnlocked, setSecureUnlocked] = useState(false);
