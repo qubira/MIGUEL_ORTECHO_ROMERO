@@ -141,6 +141,14 @@ export default function AdminPanel({
     if (selected) loadDocuments(selected.id);
   }
 
+  async function handleDeletePage(doc: Document) {
+    if (!confirm(`¿Eliminar "${doc.title}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    await fetch(`/api/admin/documents/${doc.id}`, { method: "DELETE" });
+    if (selected) loadDocuments(selected.id);
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="md:col-span-1 space-y-4">
@@ -255,7 +263,7 @@ export default function AdminPanel({
                                 onClick={() => toggleReorder(group.key)}
                                 className="btn-secondary"
                               >
-                                {isReordering ? "Listo" : "Ordenar"}
+                                {isReordering ? "Listo" : "Editar hojas"}
                               </button>
                             )}
                             <button
@@ -305,6 +313,13 @@ export default function AdminPanel({
                                     className="w-7 h-7 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                                   >
                                     ↓
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeletePage(doc)}
+                                    aria-label="Eliminar hoja"
+                                    className="w-7 h-7 rounded border border-red-200 text-red-600 hover:bg-red-50"
+                                  >
+                                    ✕
                                   </button>
                                 </div>
                               </li>

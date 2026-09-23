@@ -28,5 +28,14 @@ export async function DELETE(
 
   await prisma.document.delete({ where: { id } });
 
+  if (document.bookId) {
+    const remaining = await prisma.document.count({
+      where: { bookId: document.bookId },
+    });
+    if (remaining === 0) {
+      await prisma.book.delete({ where: { id: document.bookId } }).catch(() => null);
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }
